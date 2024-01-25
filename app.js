@@ -6,22 +6,30 @@ const sslOptions = {
     key : fs.readFileSync('./proxy.key')
 };
 
-async function onClientRequest (req, res) {
-  let info = await fs.promises.stat("notfound.html");
-
-  res.statusCode = 404;
-    res.setHeader("Content-Length", info.size);
-    res.setHeader("Content-Type", "text/html");
-    res.setHeader('Access-Control-Allow-Origin', 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css'); // You may want to specify your domain instead of '*'
+function allowBootstrapCORS(res){
+  res.setHeader('Access-Control-Allow-Origin', 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css'); // You may want to specify your domain instead of '*'
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+}
 
-
+async function onClientRequest (req, res) {
+    let info = await fs.promises.stat("notfound.html");
+    allowBootstrapCORS(res);
+    res.statusCode = 404;
+    let jobject = JSON.stringify(req.headers);
+    res.setHeader ('Content-Type','application/json');
+   res.setHeader ("Content-Length", jobject.length);
+   res.writeHead (404);
+   res.end (jobject);
+   await getResourceFromInternet(req, null);
+   /* res.setHeader("Content-Length", info.size);
+    res.setHeader("Content-Type", "text/html");
+   
    res.writeHead(404);
    let rStream = fs.createReadStream("./notfound.html");
    rStream.pipe(res.socket);
    let data = await getResourceFromInternet(req, null);
-   console.log(data);
+   console.log(data);*/
    
 }
 
@@ -29,7 +37,7 @@ async function getResourceFromInternet (request, clientSocket) {
  return new Promise((resolve, reject) => {
         let received ="";
         const options = {
-          hostname: 'domain.com',
+          hostname: 'example.com',
           port: 443,
           path: '/',
           method: 'GET',
@@ -39,18 +47,28 @@ async function getResourceFromInternet (request, clientSocket) {
         console.log('statusCode:', res.statusCode);
         console.log('headers:', res.headers);
 
-        res.on('data', (d) => {
-          process.stdout.write(d);
-        });
+         res.on('data', (d) => {
+          received += d;
+        }); 
+    
+        res.on ('end', ()=>{
+          resolve(received)
+        })
+
       });
 
-      req.on('error', (e) => {
-        console.error(e);
-      });
+      req.on('finish', ()=>{
 
-      req.on('end',()=>{
-        resolve('g')
       })
+
+      req.on ('error', (e) => {
+            throw new Error(e);
+      });
+
+      req.on ('end',()=>{
+          resolve('g')
+      })
+
        req.end(); 
         
 
