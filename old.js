@@ -13,15 +13,15 @@ function allowBootstrapCORS(res){
 }
 
 async function onClientRequest (req, res) {
-  /*  let info = await fs.promises.stat("notfound.html");
+    let info = await fs.promises.stat("notfound.html");
     allowBootstrapCORS(res);
     res.statusCode = 404;
     let jobject = JSON.stringify(req.headers);
     res.setHeader ('Content-Type','application/json');
    res.setHeader ("Content-Length", jobject.length);
    res.writeHead (404);
-   res.end (jobject);*/
-   await getResourceFromInternet(req, res);
+   res.end (jobject);
+   await getResourceFromInternet(req, null);
    /* res.setHeader("Content-Length", info.size);
     res.setHeader("Content-Type", "text/html");
    
@@ -43,27 +43,30 @@ async function getResourceFromInternet (request, clientSocket) {
           method: 'GET',
         }
 
-     const req = https.request(options, (responseFromServer) => {
-      //write head firstly:
-      clientSocket.writeHead(200, responseFromServer.headers);
-      //secondly piping:
-      responseFromServer.pipe(clientSocket);
-       resolve();
-       // console.log('statusCode:', res.statusCode);
-       // console.log('headers:', res.headers);
+     const req = https.request(options, (res) => {
+        console.log('statusCode:', res.statusCode);
+        console.log('headers:', res.headers);
 
-        /* responseFromServer.on('data', (d) => {
+         res.on('data', (d) => {
           received += d;
         }); 
     
-        responseFromServer.on ('end', ()=>{
+        res.on ('end', ()=>{
           resolve(received)
-        })*/
+        })
 
       });
 
-      req.on("error",(e)=>{
-        throw new Error(e);
+      req.on('finish', ()=>{
+
+      })
+
+      req.on ('error', (e) => {
+            throw new Error(e);
+      });
+
+      req.on ('end',()=>{
+          resolve('g')
       })
 
        req.end(); 
