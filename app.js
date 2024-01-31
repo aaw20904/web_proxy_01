@@ -1,78 +1,44 @@
-let https = require('https');
-let fs = require('fs');
+const https = require('https');
+const fs = require('fs');
 
+// Read the SSL certificate and private key
 const sslOptions = {
-    cert : fs.readFileSync('./proxy.crt'),
-    key : fs.readFileSync('./proxy.key')
+  cert: fs.readFileSync('proxy.crt'),
+  key: fs.readFileSync('proxy.key'),
 };
 
-function allowBootstrapCORS(res){
-  res.setHeader('Access-Control-Allow-Origin', 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css'); // You may want to specify your domain instead of '*'
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-}
+function onClientRequest(req, res) {
+  const { method, url, headers } = req;
 
-async function onClientRequest (req, res) {
-  /*  let info = await fs.promises.stat("notfound.html");
-    allowBootstrapCORS(res);
-    res.statusCode = 404;
-    let jobject = JSON.stringify(req.headers);
-    res.setHeader ('Content-Type','application/json');
-   res.setHeader ("Content-Length", jobject.length);
-   res.writeHead (404);
-   res.end (jobject);*/
-   await getResourceFromInternet(req, res);
-   /* res.setHeader("Content-Length", info.size);
-    res.setHeader("Content-Type", "text/html");
-   
-   res.writeHead(404);
-   let rStream = fs.createReadStream("./notfound.html");
-   rStream.pipe(res.socket);
-   let data = await getResourceFromInternet(req, null);
-   console.log(data);*/
-   
-}
+  const matched = headers.host;
+  const host = matched ? matched.trim() : null;
 
-async function getResourceFromInternet (request, clientSocket) {
- return new Promise((resolve, reject) => {
-        let received ="";
-        const options = {
-          hostname: 'example.com',
-          port: 443,
-          path: '/',
-          method: 'GET',
-        }
+  const requestOptions = {
+    method: method,
+    path: url,
+    host: host,
+    headers: headers,
+  };
 
-     const req = https.request(options, (responseFromServer) => {
-      //write head firstly:
-      clientSocket.writeHead(200, responseFromServer.headers);
-      //secondly piping:
-      responseFromServer.pipe(clientSocket);
-       resolve();
-       // console.log('statusCode:', res.statusCode);
-       // console.log('headers:', res.headers);
+  const proxyRequest = https.get(requestOptions, (proxyResponse) => {
+    // Forward the headers from the remote server to the client
+    res.writeHead(proxyResponse.statusCode, proxyResponse.headers);
 
-        /* responseFromServer.on('data', (d) => {
-          received += d;
-        }); 
-    
-        responseFromServer.on ('end', ()=>{
-          resolve(received)
-        })*/
-
-      });
-
-      req.on("error",(e)=>{
-        throw new Error(e);
-      })
-
-       req.end(); 
-        
-
+    // Pipe the proxy response to the client response
+    proxyResponse.pipe(res, { end: true });
   });
 
+  proxyRequest.on('error', (e) => {
+    console.error('Error connecting to the server:', e.message);
+    res.writeHead(500, { 'Content-Type': 'text/plain' });
+    res.end(`Error connecting to the server: ${e.message}`);
+  });
 }
 
-let proxyServer = https.createServer(sslOptions, onClientRequest);
+const proxyServer = https.createServer(sslOptions, onClientRequest);
 
-proxyServer.listen(443, ()=>console.log("TLS listen on port 443.."));
+proxyServer.on('error', (err) => {
+  console.error(`HTTPS server error: ${err.message}`);
+});
+
+proxyServer.listen(443, () => console.log('HTTPS proxy server is listening on port 443'));
