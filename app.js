@@ -3,8 +3,8 @@ const fs = require('fs');
 
 // Read the SSL certificate and private key
 const sslOptions = {
-  cert: fs.readFileSync('cert.pem'),
-  key: fs.readFileSync('cert-key.pem'),
+  cert: fs.readFileSync('certificate.crt'),
+  key: fs.readFileSync('private.key'),
   rejectUnauthorized: false
 };
 
