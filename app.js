@@ -3,8 +3,9 @@ const fs = require('fs');
 
 // Read the SSL certificate and private key
 const sslOptions = {
-  cert: fs.readFileSync('proxy.crt'),
-  key: fs.readFileSync('proxy.key'),
+  cert: fs.readFileSync('cert.pem'),
+  key: fs.readFileSync('cert-key.pem'),
+  rejectUnauthorized: false
 };
 
 function onClientRequest(req, res) {
