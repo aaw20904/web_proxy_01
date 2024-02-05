@@ -1,45 +1,30 @@
-const https = require('https');
+
 const fs = require('fs');
+ const net = require("net");
 //https://medium.com/@nimit95/a-simple-http-https-proxy-in-node-js-4eb0444f38fc
-// Read the SSL certificate and private key
-const sslOptions = {
-  cert: fs.readFileSync('certificate.crt'),
-  key: fs.readFileSync('private.key'),
-  rejectUnauthorized: false
-};
 
-function onClientRequest(req, res) {
-  const { method, url, headers } = req;
 
-  const matched = headers.host;
-  const host = matched ? matched.trim() : null;
+let server = net.createServer(onConnect);
 
-  const requestOptions = {
-    method: method,
-    path: url,
-    host: host,
-    headers: headers,
-  };
+server.listen(80, ()=>console.log("Listn on 80..."));
 
-  const proxyRequest = https.get(requestOptions, (proxyResponse) => {
-    // Forward the headers from the remote server to the client
-    res.writeHead(proxyResponse.statusCode, proxyResponse.headers);
+function onConnect(socket){
+  let clientData = '';
+  socket.on("data", (data)=>{
+    clientData += data;
+    let strings = clientData.split('\r\n');
+    let hostString = strings.find((x)=>/Host:/.test(x));
+    let hostValue = /^Host: (.+)$/.exec(hostString);
+    hostValue = hostValue[1];
+    //connect to remote host:
+    console.log(`incoming...${Date.now()}`);
+    //
+    net.createConnection(
+  let hash = Date.now().toString();
+  let msg = `HTTP/1.1 200 OK\r\nContent-Type:text/plain\r\nContent-Length:${hash.length}\r\n\r\n${hash}\r\n`;
+  socket.write(msg);
+  socket.end();
+  })
 
-    // Pipe the proxy response to the client response
-    proxyResponse.pipe(res, { end: true });
-  });
 
-  proxyRequest.on('error', (e) => {
-    console.error('Error connecting to the server:', e.message);
-    res.writeHead(500, { 'Content-Type': 'text/plain' });
-    res.end(`Error connecting to the server: ${e.message}`);
-  });
 }
-
-const proxyServer = https.createServer(sslOptions, onClientRequest);
-
-proxyServer.on('error', (err) => {
-  console.error(`HTTPS server error: ${err.message}`);
-});
-
-proxyServer.listen(443, () => console.log('HTTPS proxy server is listening on port 443'));
