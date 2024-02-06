@@ -9,7 +9,9 @@ let server = net.createServer(onConnect);
 server.listen(80, ()=>console.log("Listn on 80..."));
 
 function onConnect(clientSocket){
-  let clientData = '';
+
+   
+ let clientData = '';
   //one time listener -    We need only the data once, the starting packet
   clientSocket.once("data", (data)=>{
     
@@ -36,17 +38,34 @@ function onConnect(clientSocket){
       host:extractedHostName,
       port:port,
     },()=>{
-        //response to client - when https 
-        clientSocket.write('HTTP/1.1 200 OK\r\n\n');
-        // Piping the sockets
-        clientSocket.pipe(aimServer);
-        aimServer.pipe(clientSocket);
+      try{
+            //response to client - when https 
+          clientSocket.write('HTTP/1.1 200 OK\r\n\n');
+          // Piping the sockets
+          clientSocket.pipe(aimServer);
+          aimServer.pipe(clientSocket);
+      }catch(e){
+        console.log(e);
+      }
+      
     })
+
+      // Error event listener for aimServer
+        aimServer.on('error', (error) => {
+            console.error('Error with aimServer connection:', error);
+        });
+
+        // Error event listener for clientSocket
+        clientSocket.on('error', (error) => {
+            console.error('Error with clientSocket connection:', error);
+        });
   //let hash = Date.now().toString();
   //let msg = `HTTP/1.1 200 OK\r\nContent-Type:text/plain\r\nContent-Length:${hash.length}\r\n\r\n${hash}\r\n`;
   //clientSocket.write(msg);
   //clientSocket.end();
   })
+   
+ 
 
 
 }
