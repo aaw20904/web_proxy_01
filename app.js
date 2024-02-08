@@ -49,7 +49,7 @@ async function connectToRemoteServer (rawRequest, clientSocket, port, host, isHT
              clientSocket.write('HTTP/1.1 200 OK\r\n\n');
           } else {
             //write a raw request to a server
-             clientSocket.write (rawRequest);
+             aimServerSocket.write (rawRequest);
           }
           //pipe each other
             clientSocket.pipe (aimServerSocket);
