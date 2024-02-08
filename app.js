@@ -2,55 +2,64 @@
 const fs = require('fs');
  const net = require("net");
 //https://medium.com/@nimit95/a-simple-http-https-proxy-in-node-js-4eb0444f38fc
-
+let isTestMode = Boolean(process.argv.find((x)=>/-test/.test(x)));
+console.log("test mode =" , isTestMode);
 
 let server = net.createServer(onConnect);
 
 server.listen(80, ()=>console.log("Listn on 80..."));
 
- function onConnect(clientSocket){
+ function onConnect (clientSocket) {
 
  let clientData = '';
   //one time listener -    We need only the data once, the starting packet
-  clientSocket.once("data", async (data)=>{
-    clientData += data;
-    let hostInfo = getTypeOfRequest(clientData);
-    console.log(`incoming message ${Date.now().toString()}, ${hostInfo.host}`);
+    clientSocket.once("data", async (data)=>{
+          clientData += data;
+          let hostInfo = getTypeOfRequest(clientData);
 
-    //connect to the remote host:
-         await connectToRemoteServer(clientData, clientSocket, hostInfo.port, hostInfo.host, hostInfo.isSecure);
+          if (isTestMode) {
+            console.log(`incoming message ${Date.now().toString()}, ${hostInfo.host}`);
+          }
+        
+          //connect to the remote host:
+              await connectToRemoteServer(clientData, clientSocket, hostInfo.port, hostInfo.host, hostInfo.isSecure);
+            
 
-        // Error event listener for clientSocket
-        clientSocket.on('error', (error) => {
+    })
+
+  // Error event listener for clientSocket
+      clientSocket.on('error', (error) => {
+          if (isTestMode) {
             console.error('clientSocket connection:', error.code);
-        });
-
-  })
+          }
+      });
    
 
 }
 
-async function connectToRemoteServer(rawRequest, clientSocket, port, host, isHTTPS){
+async function connectToRemoteServer (rawRequest, clientSocket, port, host, isHTTPS) {
   return new Promise((resolve, reject) => {
       let aimServerSocket = net.createConnection({
         host:host,
         port:port
       },()=>{
           //is it a https?
-          if(isHTTPS){
+          if (isHTTPS) {
             //sends 200
              clientSocket.write('HTTP/1.1 200 OK\r\n\n');
-          }else{
+          } else {
             //write a raw request to a server
-             clientSocket.write(rawRequest);
+             clientSocket.write (rawRequest);
           }
           //pipe each other
-            clientSocket.pipe(aimServerSocket);
-          aimServerSocket.pipe(clientSocket);
+            clientSocket.pipe (aimServerSocket);
+          aimServerSocket.pipe (clientSocket);
       });
 
-      aimServerSocket.on("error",(error)=>{
-        console.error('Error with aimServer connection:', error.code);
+      aimServerSocket.on ("error",(error)=>{
+        if (isTestMode) {
+          console.error ('Error with aimServer connection:', error.code);
+        }
             //cheking-has a site not been found?
             let msg404 = `<!DOCTYPE html>
             <head>
@@ -91,9 +100,7 @@ async function connectToRemoteServer(rawRequest, clientSocket, port, host, isHTT
             }
       })
 
-      clientSocket.on("end",()=>{
-        resolve();
-      })
+      
   });
 }
 
